@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+var catty = require("./catty.js");
+catty.addLibrary("../js-basics-v2/src");
+catty.bundleFile("src/catty.js", "./catty.js");

@@ -1,0 +1,13 @@
+{
+	"name": "catty",
+	"version": "0.0.1",
+	"description": "Mapshaper's build tool",
+	"keywords": ["mapshaper"],
+	"author": "Matthew Bloch <mbloch@nytimes.com>",
+	"main": "./catty.js",
+	"dependencies": {
+    "underscore": "~1.7",
+    "nomnom": "~1.8"
+	},
+	"bin": "./bin/catty"
+}
