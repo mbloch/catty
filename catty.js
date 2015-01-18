@@ -3,7 +3,7 @@ var path = require('path');
 var _ = require('underscore');
 var catty = new Catty();
 
-// Matches comments like:
+// regex for comments like:
 // /* @requires name1, name2, name3 */
 // (Comments may span multiple lines, commas are optional)
 var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\//g;
@@ -14,8 +14,8 @@ function Catty(opts) {
     follow: false
   }, opts || {});
 
-  var filePathIndex = {},   // paths of known js files indexed by filename
-      watchedFiles = {},  // SourceFile objects indexed by filename
+  var knownFileIndex = {},   // paths of known js files indexed by basename
+      watchedFiles = {},  // SourceFile objects indexed by basename
       jobs = [];
 
   // @path A directory containing JavaScript source files
@@ -44,7 +44,7 @@ function Catty(opts) {
   function runJobs() {
     jobs.forEach(function(job) {
       job.run();
-    })
+    });
   }
 
   function getNode(key) {
@@ -67,7 +67,7 @@ function Catty(opts) {
       if (startNode.name() in sorted === false) {
         for (i=startId+1; i<len; i++) {
           nodeName = nodes[i].name();
-          if (nodeName in sorted == false && startNode.requiresFile(nodeName)) {
+          if (nodeName in sorted === false && startNode.requiresFile(nodeName)) {
             reqId = i;
           }
         }
@@ -89,41 +89,18 @@ function Catty(opts) {
     var name = getFileInfo(path).basename;
     if (!name) {
       die("Invalid path: " + path);
-    } else if (name in filePathIndex === false) {
-      filePathIndex[name] = path;
-    } else if (filePathIndex[name] !== path) {
+    } else if (name in knownFileIndex === false) {
+      knownFileIndex[name] = path;
+    } else if (knownFileIndex[name] !== path) {
       console.log("File name collision.");
-      console.log("Using:", filePathIndex[name]);
+      console.log("Using:", knownFileIndex[name]);
       console.log("Ignoring:", path);
     }
     return name;
   }
 
-  function addDependency(key) {
-    var node;
-    if (key in filePathIndex === false) {
-      throw new Error("Unknown dependency -- " + key);
-    }
-    if (key in watchedFiles === false) {
-      node = new SourceFile(filePathIndex[key]);
-      node.getDeps().forEach(addDependency);
-      if (opts.follow) {
-        node.startMonitoring(function(err) {
-          if (err) {
-            console.error(err.message);
-          } else {
-            console.log("Re-catting -- change in " + node.filename());
-            runJobs(); // TODO: only run jobs that use this the changed source file
-          }
-        });
-      }
-    }
-  }
-
   function SourceFile(path) {
     var info = getFileInfo(path),
-        _self = this,
-        _id = SourceFile.count ? ++SourceFile.count : (SourceFile.count = 1),
         _deps = [],
         _js = "";
 
@@ -131,12 +108,13 @@ function Catty(opts) {
       die("Invalid source file: " + path);
     }
     watchedFiles[info.basename] = this;
+    if (opts.follow) {
+      startMonitoring();
+    }
+    updateDeps();
 
-    this.name = getName;
-    this.filename = function() {
-      return info.filename;
-    };
-    this.content = function() { return _js; };
+    this.name = function() { return info.basename; };
+    this.getContent = function() { return _js; };
     this.getDeps = function() { return _deps; };
 
     this.requiresFile = function(targName, visited) {
@@ -149,7 +127,7 @@ function Catty(opts) {
 
       for (var i=0; i<reqs.length; i++) {
         var reqName = reqs[i];
-        if (reqName in visited == false) {
+        if (reqName in visited === false) {
           var reqNode = watchedFiles[reqName];
           if (reqNode.requiresFile(targName, visited)) {
             return true;
@@ -159,11 +137,7 @@ function Catty(opts) {
       return false;
     };
 
-    function getName() {
-      return info.basename;
-    }
-
-    function checkFileChange() {
+    function updateDeps() {
       var js = fs.readFileSync(path, {encoding:"utf8"});
       // (os x) When editor opens file to write, file may
       // appear to be empty -- ignoring change if len is 0
@@ -174,6 +148,15 @@ function Catty(opts) {
         _deps.forEach(addDependency);
       }
       return changed;
+    }
+
+    function addDependency(key) {
+      if (key in knownFileIndex === false) {
+        throw new Error("Unknown dependency in " + path + " -- " + key);
+      }
+      if (key in watchedFiles === false) {
+        new SourceFile(knownFileIndex[key]);
+      }
     }
 
     function parseDeps(js) {
@@ -187,7 +170,16 @@ function Catty(opts) {
       return deps;
     }
 
-    this.startMonitoring = function(onChange) {
+    function onChange(err) {
+      if (err) {
+        console.error(err.message);
+      } else {
+        console.log("Re-catting -- change in " + path);
+        runJobs(); // TODO: only run jobs that use this the changed source file
+      }
+    }
+
+    function startMonitoring() {
       var timeout = null;
       fs.watch(path, function(evt) {
         if (evt == "change" || evt == "rename") {
@@ -196,20 +188,16 @@ function Catty(opts) {
           timeout && clearTimeout(timeout);
           timeout = setTimeout(function() {
             try {
-              if (checkFileChange()) {
+              if (updateDeps()) {
                 onChange();
               }
             } catch(e) {
               onChange(e);
             }
           }, 150);
-        } else {
-          console.log("Unknown watch event:", evt);
         }
       });
     };
-
-    checkFileChange();
 
   } // SourceFile
 
@@ -230,12 +218,12 @@ function Catty(opts) {
       die("Invalid output file: " + dest);
     }
 
-    inFiles.forEach(function(ifile) {
+    rootKeys = inFiles.map(function(ifile) {
       if (ifile == outFile) die("Tried to overwrite a source file: " + ifile);
       if (!fileExists(ifile)) die("Source file not found: " + ifile);
       var name = indexFile(ifile);
-      addDependency(name);
-      rootKeys.push(name);
+      var node = new SourceFile(ifile);
+      return node.name();
     });
 
     // return list of all deps reached by list of deps
@@ -252,7 +240,7 @@ function Catty(opts) {
     function concatenate() {
       var nodes = findDeps(rootKeys).map(getNode);
       sortNodes(nodes);
-      return nodes.map(function(node) { return node.content(); }).join('\n\n');
+      return nodes.map(function(node) { return node.getContent(); }).join('\n\n');
     };
 
     function stripComments(js) {
@@ -327,20 +315,20 @@ function getFileInfo(p) {
   return info;
 }
 
-function walkSync(dir, results) {
-  results = results || [];
+function walkSync(dir, memo) {
+  memo = memo || [];
   var list = fs.readdirSync(dir);
   list.forEach(function(file) {
-    var path = dir + "/" + file;
-    var stat = fs.statSync(path);
+    var filepath = path.join(dir, file);
+    var stat = fs.statSync(filepath);
     if (stat && stat.isDirectory()) {
-      walkSync(path, results);
+      walkSync(filepath, memo);
     }
     else {
-      results.push(path);
+      memo.push(path);
     }
   });
-  return results;
+  return memo;
 }
 
 function die(msg) {

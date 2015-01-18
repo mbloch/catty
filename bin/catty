@@ -26,7 +26,6 @@ if (opts.follow) {
 
 if (opts.dir) {
   opts.dir.split(',').forEach(function(d) {
-    console.log("adding lib:", d)
     catty.addLibrary(d);
   });
 }
