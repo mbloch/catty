@@ -1,13 +1,30 @@
 {
-	"name": "catty",
-	"version": "0.0.1",
-	"description": "Mapshaper's build tool",
-	"keywords": ["mapshaper"],
-	"author": "Matthew Bloch <mbloch@nytimes.com>",
-	"main": "./catty.js",
-	"dependencies": {
+  "name": "catty",
+  "version": "0.0.2",
+  "description": "Mapshaper's build tool",
+  "keywords": [
+    "mapshaper"
+  ],
+  "author": "Matthew Bloch <mbloch@nytimes.com>",
+  "main": "./catty.js",
+  "dependencies": {
     "underscore": "~1.7",
     "nomnom": "~1.8"
-	},
-	"bin": "./bin/catty"
+  },
+  "bin": {
+    "catty": "./bin/catty"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbloch/catty.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mbloch/catty/issues"
+  },
+  "homepage": "https://github.com/mbloch/catty"
 }

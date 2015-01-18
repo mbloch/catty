@@ -325,7 +325,7 @@ function walkSync(dir, memo) {
       walkSync(filepath, memo);
     }
     else {
-      memo.push(path);
+      memo.push(filepath);
     }
   });
   return memo;
