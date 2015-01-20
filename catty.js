@@ -18,6 +18,10 @@ function Catty(opts) {
       watchedFiles = {},  // SourceFile objects indexed by basename
       jobs = [];
 
+  this.internal = { // expose internal functions for unit testing
+    parseDeps: parseDeps
+  };
+
   // @path A directory containing JavaScript source files
   //   (subdirectories are also indexed)
   this.addLibrary = function(path) {
@@ -159,17 +163,6 @@ function Catty(opts) {
       }
     }
 
-    function parseDeps(js) {
-      var fileRxp = /\*?[_0-9a-z](?:[.-]?[_0-9a-z])*/ig,  // careful, don't match "*/"
-          deps = [], match, match2;
-      while (match = REQUIRES_RXP.exec(js)) {
-        while (match2 = fileRxp.exec(match[1])) {
-          deps.push(match2[0]);
-        }
-      }
-      return deps;
-    }
-
     function onChange(err) {
       if (err) {
         console.error(err.message);
@@ -197,7 +190,7 @@ function Catty(opts) {
           }, 150);
         }
       });
-    };
+    }
 
   } // SourceFile
 
@@ -281,6 +274,18 @@ function Catty(opts) {
   } // CattyJob
 
 } // Catty
+
+
+function parseDeps(js) {
+  var fileRxp = /\*?[_0-9a-z](?:[.-]?[_0-9a-z])*/ig,
+      deps = [], match, match2;
+  while (match = REQUIRES_RXP.exec(js)) {
+    while (match2 = fileRxp.exec(match[1])) {
+      deps.push(match2[0]);
+    }
+  }
+  return deps;
+}
 
 function findSourceFiles(dirPath) {
   var results = walkSync(dirPath);
