@@ -27,6 +27,7 @@ function Catty(opts) {
   // enable/disable coffeescript mode
   this.coffee = function(_coffee) {
     coffee = _coffee;
+    return this;
   };
 
   // @path A directory containing JavaScript source files
