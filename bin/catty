@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 var opts = require("nomnom")
-    .help("Usage: catty [flags] input output")
+    .help("Usage: catty [flags] input [output]")
     .option('follow', {
       abbr: "f",
       flag: true

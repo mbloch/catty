@@ -96,9 +96,9 @@ function Catty(opts) {
     } else if (name in knownFileIndex === false) {
       knownFileIndex[name] = path;
     } else if (knownFileIndex[name] !== path) {
-      console.log("File name collision.");
-      console.log("Using:", knownFileIndex[name]);
-      console.log("Ignoring:", path);
+      console.error("File name collision.");
+      console.error("Using:", knownFileIndex[name]);
+      console.error("Ignoring:", path);
     }
     return name;
   }
@@ -167,7 +167,7 @@ function Catty(opts) {
       if (err) {
         console.error(err.message);
       } else {
-        console.log("Re-catting -- change in " + path);
+        console.error("Re-catting -- change in " + path);
         runJobs(); // TODO: only run jobs that use this the changed source file
       }
     }
@@ -196,7 +196,9 @@ function Catty(opts) {
 
   function CattyJob(src, dest) {
     var rootKeys = [];
-    var inFiles, outFile;
+    var useStdout = !dest || dest == '-' || dest == '/dev/stdout';
+    var outFile = useStdout ? null : dest;
+    var inFiles;
     if (_.isString(src)) {
       inFiles = [src];
     } else if (_.isArray(src)) {
@@ -205,10 +207,8 @@ function Catty(opts) {
       die("Invalid input file(s): " + src);
     }
 
-    if (_.isString(dest)) {
-      outFile = dest;
-    } else {
-      die("Invalid output file: " + dest);
+    if (opts.follow && useStdout) {
+      die("-f option is not compatible with output to stdout");
     }
 
     rootKeys = inFiles.map(function(ifile) {
@@ -254,16 +254,20 @@ function Catty(opts) {
     }
 
     this.run = function() {
-      var js;
-      // check that dir (still) exists
-      var dirname = path.dirname(outFile);
-      if (!dirExists(dirname)) {
-        die("Destination directory not found: " + dirname);
-      }
+      var js, dirname;
       try {
         js = bundle();
-        fs.writeFileSync(outFile, js);
-        console.log("Wrote " + outFile);
+        if (useStdout) {
+          console.log(js);
+        } else {
+          // check that dir (still) exists
+          dirname = path.dirname(outFile);
+          if (!dirExists(dirname)) {
+            die("Destination directory not found: " + dirname);
+          }
+          fs.writeFileSync(outFile, js);
+          console.error("Wrote " + outFile);
+        }
       } catch(e) {
         // Print message, don't exit (let user correct dependency problems
         // when monitoring files).
