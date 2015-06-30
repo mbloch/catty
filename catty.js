@@ -197,7 +197,6 @@ function Catty(opts) {
   function CattyJob(src, dest) {
     var rootKeys = [];
     var useStdout = !dest || dest == '-' || dest == '/dev/stdout';
-    var outFile = useStdout ? null : dest;
     var inFiles;
     if (_.isString(src)) {
       inFiles = [src];
@@ -212,7 +211,7 @@ function Catty(opts) {
     }
 
     rootKeys = inFiles.map(function(ifile) {
-      if (ifile == outFile) die("Tried to overwrite a source file: " + ifile);
+      if (ifile == dest) die("Tried to overwrite a source file: " + ifile);
       if (!fileExists(ifile)) die("Source file not found: " + ifile);
       var name = indexFile(ifile);
       var node = new SourceFile(ifile);
@@ -259,14 +258,16 @@ function Catty(opts) {
         js = bundle();
         if (useStdout) {
           console.log(js);
-        } else {
+        } else if (_.isFunction(dest)) {
+          dest(null, js);
+        } else if (_.isString(dest)) {
           // check that dir (still) exists
-          dirname = path.dirname(outFile);
+          dirname = path.dirname(dest);
           if (!dirExists(dirname)) {
             die("Destination directory not found: " + dirname);
           }
-          fs.writeFileSync(outFile, js);
-          console.error("Wrote " + outFile);
+          fs.writeFileSync(dest, js);
+          console.error("Wrote " + dest);
         }
       } catch(e) {
         // Print message, don't exit (let user correct dependency problems

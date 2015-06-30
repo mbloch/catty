@@ -1,6 +1,6 @@
 {
   "name": "catty",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Mapshaper's build tool",
   "keywords": [
     "mapshaper"

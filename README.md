@@ -22,6 +22,7 @@ Example: `$ catty -g -d src,lib src/input.js dist/output.js`
 
 ### Node module ###
 
+**Example**
 ```
 require('catty')({global: true})
 	.addLibrary('src')
@@ -29,9 +30,15 @@ require('catty')({global: true})
 	.cat('src/input.js', 'dist/output.js');
 ```
 
+**Methods**
+
+`#cat(input, output)`  Concatenate an input file with its dependencies. `output` may be a filename or a Node-style callback. If `output` is empty or contains a hyphen, catty sends its output to `stdout`.
+
+`#addLibrary(dir)`  Give catty a directory to search for dependencies.
+
 ### Comment format ###
 
-Some examples showing how dependencies can be listed:
+**Examples**
 
 ```
 /* @requires
@@ -44,3 +51,4 @@ mapshaper-dataset-utils
 ```
 /* @requires mapshaper-shapes, mapshaper-shape-geom */
 ```
+ls
