@@ -19,7 +19,8 @@ function Catty(opts) {
       jobs = [];
 
   this.internal = { // expose internal functions for unit testing
-    parseDeps: parseDeps
+    parseDeps: parseDeps,
+    stripBOM: stripBOM
   };
 
   // @path A directory containing JavaScript source files
@@ -143,6 +144,7 @@ function Catty(opts) {
 
     function updateDeps() {
       var js = fs.readFileSync(path, {encoding:"utf8"});
+      js = stripBOM(js);
       // (os x) When editor opens file to write, file may
       // appear to be empty -- ignoring change if len is 0
       var changed = js.length > 0 && js !== _js;
@@ -253,33 +255,41 @@ function Catty(opts) {
     }
 
     this.run = function() {
-      var js, dirname;
+      var js, dirname, err;
       try {
         js = bundle();
-        if (useStdout) {
-          console.log(js);
-        } else if (_.isFunction(dest)) {
-          dest(null, js);
-        } else if (_.isString(dest)) {
-          // check that dir (still) exists
-          dirname = path.dirname(dest);
-          if (!dirExists(dirname)) {
-            die("Destination directory not found: " + dirname);
-          }
-          fs.writeFileSync(dest, js);
-          console.error("Wrote " + dest);
-        }
       } catch(e) {
+        err = e;
+      }
+
+      if (_.isFunction(dest)) {
+        dest(err, js);
+      } else if (err) {
         // Print message, don't exit (let user correct dependency problems
         // when monitoring files).
         console.error(e.message);
+      } else if (useStdout) {
+        console.log(js);
+      } else if (_.isString(dest)) {
+        // check that dir (still) exists
+        dirname = path.dirname(dest);
+        if (!dirExists(dirname)) {
+          die("Destination directory not found: " + dirname);
+        }
+        fs.writeFileSync(dest, js);
+        console.error("Wrote " + dest);
       }
     };
-
   } // CattyJob
 
 } // Catty
 
+function stripBOM(str) {
+  if (str && str.charCodeAt(0) === 0xFEFF) {
+    str = str.slice(1);
+  }
+  return str;
+}
 
 function parseDeps(js) {
   var fileRxp = /\*?[_0-9a-z](?:[.-]?[_0-9a-z])*/ig,
