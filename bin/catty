@@ -24,6 +24,8 @@ if (opts.follow) {
   initKeyCommands();
 }
 
+if (/\.coffee$/.test(input)) catty.coffee(true);
+
 if (opts.dir) {
   opts.dir.split(',').forEach(function(d) {
     catty.addLibrary(d);

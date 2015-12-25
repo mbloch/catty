@@ -6,7 +6,8 @@ var catty = new Catty();
 // regex for comments like:
 // /* @requires name1, name2, name3 */
 // (Comments may span multiple lines, commas are optional)
-var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\//g;
+var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\//g,
+    REQUIRES_RXP_COFFEE = /#+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*(?:\n|###)/g;
 
 function Catty(opts) {
   opts = _.extend({
@@ -16,11 +17,18 @@ function Catty(opts) {
 
   var knownFileIndex = {},   // paths of known js files indexed by basename
       watchedFiles = {},  // SourceFile objects indexed by basename
-      jobs = [];
+      jobs = [],
+      coffee = false;
 
   this.internal = { // expose internal functions for unit testing
     parseDeps: parseDeps,
     stripBOM: stripBOM
+  };
+
+  // enable/disable coffeescript mode
+  this.coffee = function(_coffee) {
+    coffee = _coffee;
+    return this;
   };
 
   // @path A directory containing JavaScript source files
@@ -29,7 +37,7 @@ function Catty(opts) {
     if (!dirExists(path)) {
       die("Not a valid directory: " + path);
     }
-    findSourceFiles(path).forEach(indexFile);
+    findSourceFiles(path, coffee).forEach(indexFile);
     return this;
   };
 
@@ -109,7 +117,7 @@ function Catty(opts) {
         _deps = [],
         _js = "";
 
-    if (!info.is_file || info.ext != '.js') {
+    if (!info.is_file || (info.ext != '.js' && info.ext != '.coffee')) {
       die("Invalid source file: " + path);
     }
     watchedFiles[info.basename] = this;
@@ -150,7 +158,7 @@ function Catty(opts) {
       var changed = js.length > 0 && js !== _js;
       if (changed) {
         _js = js;
-        _deps = parseDeps(js);
+        _deps = parseDeps(js, coffee);
         _deps.forEach(addDependency);
       }
       return changed;
@@ -235,14 +243,14 @@ function Catty(opts) {
       var nodes = findDeps(rootKeys).map(getNode);
       sortNodes(nodes);
       return nodes.map(function(node) { return node.getContent(); }).join('\n\n');
-    };
+    }
 
     function stripComments(js) {
-      return js.replace(REQUIRES_RXP, '');
+      return js.replace(coffee ? REQUIRES_RXP_COFFEE : REQUIRES_RXP, '');
     }
 
     function addClosure(js) {
-      return "(function(){\n" + js + "\n}());\n";
+      return coffee ? js : "(function(){\n" + js + "\n}());\n";
     }
 
     function bundle() {
@@ -291,10 +299,10 @@ function stripBOM(str) {
   return str;
 }
 
-function parseDeps(js) {
+function parseDeps(js, coffee) {
   var fileRxp = /\*?[_0-9a-z](?:[.-]?[_0-9a-z])*/ig,
       deps = [], match, match2;
-  while (match = REQUIRES_RXP.exec(js)) {
+  while (match = (coffee ? REQUIRES_RXP_COFFEE : REQUIRES_RXP).exec(js)) {
     while (match2 = fileRxp.exec(match[1])) {
       deps.push(match2[0]);
     }
@@ -302,10 +310,10 @@ function parseDeps(js) {
   return deps;
 }
 
-function findSourceFiles(dirPath) {
+function findSourceFiles(dirPath, coffee) {
   var results = walkSync(dirPath);
   return results.filter(function(filePath) {
-    return /\.js$/.test(filePath);
+    return (coffee ? /\.coffee$/ : /\.js$/).test(filePath);
   });
 }
 
