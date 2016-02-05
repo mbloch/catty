@@ -56,6 +56,17 @@ describe('catty.js', function () {
       })
     })
 
+    it('#prepend() adds JS at top of file, after closure', function (done) {
+      var a = 'test/test_data/a.js';
+      var targ = "(function(){\nvar VERSION = '0.1';\n\"a\"\n\n}());\n";
+      api
+        .prepend("var VERSION = '0.1';")
+        .cat(a, function(err, str) {
+          assert.equal(str, targ);
+          done();
+        })
+    })
+
   })
 
   describe('stripBOM()', function () {

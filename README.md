@@ -36,6 +36,8 @@ require('catty')({global: true})
 
 `#addLibrary(dir)`  Give catty a directory to search for dependencies.
 
+`#prepend(JS)`  Insert JavaScript before concatenated code.
+
 ### Comment format ###
 
 **Examples**

@@ -14,6 +14,7 @@ function Catty(opts) {
     follow: false
   }, opts || {});
 
+  var prepended = "";
   var knownFileIndex = {},   // paths of known js files indexed by basename
       watchedFiles = {},  // SourceFile objects indexed by basename
       jobs = [];
@@ -21,6 +22,16 @@ function Catty(opts) {
   this.internal = { // expose internal functions for unit testing
     parseDeps: parseDeps,
     stripBOM: stripBOM
+  };
+
+  this.prepend = function(js) {
+    try {
+      eval(js); // catch syntax errors
+      prepended = js;
+    } catch(e) {
+      console.error("[prepend] Invalid JavaScript: ", js);
+    }
+    return this;
   };
 
   // @path A directory containing JavaScript source files
@@ -246,7 +257,11 @@ function Catty(opts) {
     }
 
     function bundle() {
-      var js = concatenate();
+      var js = "";
+      if (prepended) {
+        js += prepended + '\n';
+      }
+      js += concatenate();
       js = stripComments(js);
       if (!opts.global) {
         js = addClosure(js);
