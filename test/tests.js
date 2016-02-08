@@ -34,7 +34,29 @@ describe('catty.js', function () {
       var b = 'test/test_data/b.js';
       api({global: true})
         .addLibrary('test/test_data').cat(b, function(err, str) {
-        assert.equal(str, '"a"\n\n\n\n"b"\n');
+        assert.equal(str, '"a"\n\n\n"b"\n');
+        done();
+      })
+    })
+
+    it('#external() ignores a dependency', function (done) {
+      var b = 'test/test_data/b.js';
+      api({global: true})
+        .addLibrary('test/test_data')
+        .external('a')
+        .cat(b, function(err, str) {
+        assert.equal(str, '"b"\n');
+        done();
+      })
+    })
+
+    it('#external() ignores a dependency 2', function (done) {
+      var b = 'test/test_data/b.js';
+      api({global: true})
+        .addLibrary('test/test_data')
+        .external(['a'])
+        .cat(b, function(err, str) {
+        assert.equal(str, '"b"\n');
         done();
       })
     })
@@ -43,7 +65,7 @@ describe('catty.js', function () {
       var c = 'test/test_data/c_bom.js';
       api({global: true})
         .addLibrary('test/test_data').cat(c, function(err, str) {
-        assert.equal(str, '"a"\n\n\n\n"b"\n\n\n\n"c"\n');
+        assert.equal(str, '"a"\n\n\n"b"\n\n\n"c"\n');
         done();
       })
     })

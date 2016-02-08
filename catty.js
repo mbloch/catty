@@ -6,7 +6,7 @@ var catty = new Catty();
 // regex for comments like:
 // /* @requires name1, name2, name3 */
 // (Comments may span multiple lines, commas are optional)
-var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\//g;
+var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\/\s*\n?/g;
 
 function Catty(opts) {
   opts = _.extend({
@@ -15,6 +15,7 @@ function Catty(opts) {
   }, opts || {});
 
   var prepended = "";
+  var externals = [];
   var knownFileIndex = {},   // paths of known js files indexed by basename
       watchedFiles = {},  // SourceFile objects indexed by basename
       jobs = [];
@@ -22,6 +23,11 @@ function Catty(opts) {
   this.internal = { // expose internal functions for unit testing
     parseDeps: parseDeps,
     stripBOM: stripBOM
+  };
+
+  this.external = function(arg) {
+    externals = _.isArray(arg) ? arg : _.toArray(arguments);
+    return this;
   };
 
   this.prepend = function(js) {
@@ -162,6 +168,7 @@ function Catty(opts) {
       if (changed) {
         _js = js;
         _deps = parseDeps(js);
+        _deps = _.difference(_deps, externals);
         _deps.forEach(addDependency);
       }
       return changed;
