@@ -9,30 +9,44 @@ var catty = new Catty();
 var REQUIRES_RXP = /\/\*+\s*@requires?\b([\s,;_0-9A-Za-z.-]+)\s*\*+\/\s*\n?/g;
 
 function Catty(opts) {
+  var prepended = "",
+      externals = [];
+      knownFileIndex = {},   // paths of known js files indexed by basename
+      watchedFiles = {},  // SourceFile objects indexed by basename
+      jobs = [],
+      addedDeps = [];
+
   opts = _.extend({
     global: false,
     follow: false
   }, opts || {});
-
-  var prepended = "";
-  var externals = [];
-  var knownFileIndex = {},   // paths of known js files indexed by basename
-      watchedFiles = {},  // SourceFile objects indexed by basename
-      jobs = [];
 
   this.internal = { // expose internal functions for unit testing
     parseDeps: parseDeps,
     stripBOM: stripBOM
   };
 
+  // @deps array or comma-separated list of depencencies to insert into the
+  // root document(s)
+  this.addDeps = function(deps) {
+    if (_.isString(deps)) {
+      deps = deps.split(',');
+    }
+    addedDeps = _.union(addedDeps, deps);
+    return this;
+  };
+
+  // @arg name of an external dependency, which shouldn't be bundled
   this.external = function(arg) {
     externals = _.isArray(arg) ? arg : _.toArray(arguments);
     return this;
   };
 
+  // @js JS string to insert at the beginning of the concatenated files, but
+  // inside the module closure (could contain variable definitions)
   this.prepend = function(js) {
     try {
-      eval(js); // catch syntax errors
+      // eval(js); // catch syntax errors
       prepended = js;
     } catch(e) {
       console.error("[prepend] Invalid JavaScript: ", js);
@@ -55,6 +69,9 @@ function Catty(opts) {
     var job;
     try {
       job = new CattyJob(src, dest);
+      if (addedDeps.length > 0) {
+        job.addDeps(addedDeps);
+      }
     } catch(e) {
       die(e.message);
     }
@@ -124,6 +141,7 @@ function Catty(opts) {
   function SourceFile(path) {
     var info = getFileInfo(path),
         _deps = [],
+        _insertedDeps = [],
         _js = "";
 
     if (!info.is_file || info.ext != '.js') {
@@ -133,11 +151,16 @@ function Catty(opts) {
     if (opts.follow) {
       startMonitoring();
     }
-    updateDeps();
+    findDeps();
 
     this.name = function() { return info.basename; };
     this.getContent = function() { return _js; };
     this.getDeps = function() { return _deps; };
+
+    this.insertDeps = function(deps) {
+      _insertedDeps = deps;
+      updateDeps(_deps);
+    };
 
     this.requiresFile = function(targName, visited) {
       visited = visited || {};
@@ -159,7 +182,7 @@ function Catty(opts) {
       return false;
     };
 
-    function updateDeps() {
+    function findDeps() {
       var js = fs.readFileSync(path, {encoding:"utf8"});
       js = stripBOM(js);
       // (os x) When editor opens file to write, file may
@@ -167,11 +190,16 @@ function Catty(opts) {
       var changed = js.length > 0 && js !== _js;
       if (changed) {
         _js = js;
-        _deps = parseDeps(js);
-        _deps = _.difference(_deps, externals);
-        _deps.forEach(addDependency);
+        updateDeps(parseDeps(js));
       }
       return changed;
+    }
+
+    function updateDeps(deps) {
+      deps = _.union(deps, _insertedDeps);
+      deps = _.difference(deps, externals);
+      deps.forEach(addDependency);
+      _deps = deps;
     }
 
     function addDependency(key) {
@@ -201,7 +229,7 @@ function Catty(opts) {
           timeout && clearTimeout(timeout);
           timeout = setTimeout(function() {
             try {
-              if (updateDeps()) {
+              if (findDeps()) {
                 onChange();
               }
             } catch(e) {
@@ -215,7 +243,7 @@ function Catty(opts) {
   } // SourceFile
 
   function CattyJob(src, dest) {
-    var rootKeys = [];
+    var roots = [];
     var useStdout = !dest || dest == '-' || dest == '/dev/stdout';
     var inFiles;
     if (_.isString(src)) {
@@ -230,12 +258,11 @@ function Catty(opts) {
       die("-f option is not compatible with output to stdout");
     }
 
-    rootKeys = inFiles.map(function(ifile) {
+    roots = inFiles.map(function(ifile) {
       if (ifile == dest) die("Tried to overwrite a source file: " + ifile);
       if (!fileExists(ifile)) die("Source file not found: " + ifile);
       var name = indexFile(ifile);
-      var node = new SourceFile(ifile);
-      return node.name();
+      return new SourceFile(ifile);
     });
 
     // return list of all deps reached by list of deps
@@ -250,7 +277,8 @@ function Catty(opts) {
     }
 
     function concatenate() {
-      var nodes = findDeps(rootKeys).map(getNode);
+      var keys = roots.map(function(node) {return node.name();});
+      var nodes = findDeps(keys).map(getNode);
       sortNodes(nodes);
       return nodes.map(function(node) { return node.getContent(); }).join('\n\n');
     };
@@ -275,6 +303,10 @@ function Catty(opts) {
       }
       return js;
     }
+
+    this.addDeps = function(deps) {
+      roots.forEach(function(node) {node.insertDeps(deps);});
+    };
 
     this.run = function() {
       var js, dirname, err;

@@ -37,6 +37,17 @@ describe('catty.js', function () {
         assert.equal(str, '"a"\n\n\n"b"\n');
         done();
       })
+    });
+
+    it('#addDeps() inserts deps', function(done) {
+      var b = 'test/test_data/b.js';
+      api({global: true})
+        .addLibrary('test/test_data')
+        .addDeps("c,d")
+        .cat(b, function(err, str) {
+        assert.equal(str, '"a"\n\n\n"c"\n\n\n"d"\n\n\n"b"\n');
+        done();
+      })
     })
 
     it('#external() ignores a dependency', function (done) {

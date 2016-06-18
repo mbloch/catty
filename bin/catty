@@ -13,6 +13,8 @@ var opts = require("nomnom")
       flag: true,
       abbr: 'g'
     })
+    .option('deps', {
+    })
     .parse();
 
 var catty = require("../")(opts);

@@ -38,6 +38,8 @@ require('catty')({global: true})
 
 `#prepend(JS)`  Insert JavaScript before concatenated code.
 
+`#addDeps(deps)`  Inject one or more additional dependencies into the input file (comma-sep. list).
+
 ### Comment format ###
 
 **Examples**
