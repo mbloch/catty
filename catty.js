@@ -259,6 +259,7 @@ function Catty(opts) {
     }
 
     roots = inFiles.map(function(ifile) {
+      ifile = path.join(ifile); // Update slashes on Windows
       if (ifile == dest) die("Tried to overwrite a source file: " + ifile);
       if (!fileExists(ifile)) die("Source file not found: " + ifile);
       var name = indexFile(ifile);

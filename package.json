@@ -1,6 +1,6 @@
 {
   "name": "catty",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Mapshaper's build tool",
   "keywords": [
     "mapshaper"
@@ -15,7 +15,7 @@
     "catty": "./bin/catty"
   },
   "devDependencies": {
-    "mocha": "~2.3.3"
+    "mocha": "^6.2.1"
   },
   "scripts": {
     "test": "mocha --check-leaks -R dot"
