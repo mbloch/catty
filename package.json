@@ -1,6 +1,6 @@
 {
   "name": "catty",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "Mapshaper's build tool",
   "keywords": [
     "mapshaper"
@@ -24,6 +24,10 @@
     "type": "git",
     "url": "https://github.com/mbloch/catty.git"
   },
+  "files": [
+    "/bin/catty",
+    "/catty.js"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mbloch/catty/issues"
