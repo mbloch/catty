@@ -8,7 +8,7 @@
   "author": "Matthew Bloch <mbloch@nytimes.com>",
   "main": "./catty.js",
   "dependencies": {
-    "underscore": "~1.7",
+    "underscore": "~1.12",
     "nomnom": "~1.8"
   },
   "bin": {
